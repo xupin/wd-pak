@@ -20,7 +20,7 @@ func main() {
 	flag.Parse()
 
 	if t < 1 || len(filePath) == 0 || len(folderPath) == 0 {
-		fmt.Printf("请输入 -h 查看说明 \n")
+		fmt.Printf("请输入 -h 查看说明（via 90gm.vip） \n")
 		return
 	}
 
