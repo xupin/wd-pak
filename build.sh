@@ -4,17 +4,14 @@ pf=${1}
 
 workdir=$(cd $(dirname $0); pwd)
 out=$workdir/build/pak-tool
-CGO_ENABLED=0
-GOARCH=${2-amd64}
-GOOS=darwin
-
+arch=${2-amd64}
 
 if [ "$pf" = "windows" ];then
-    GOOS=windows out="$out-win.exe"
+    os=windows out="$out-win.exe"
 elif [ "$pf" = "linux" ];then
-    GOOS=linux out="$out-linux"
+    os=linux out="$out-linux"
 else    
-    GOOS=darwin out="$out-osx"
+    os=darwin out="$out-osx"
 fi
 
-go build -ldflags "-w -s" -gcflags="all=-trimpath=${PWD}" -asmflags="all=-trimpath=${PWD}" -o $out $workdir/.
+CGO_ENABLED=0 GOARCH=$arch GOOS=$os go build -ldflags "-w -s" -gcflags="all=-trimpath=${PWD}" -asmflags="all=-trimpath=${PWD}" -o $out $workdir/.
