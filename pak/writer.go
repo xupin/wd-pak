@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/xupin/wd-pak/lzss"
+	"github.com/xupin/wd-pak/utils"
 )
 
 type writer struct {
@@ -57,8 +58,9 @@ func (r *writer) Close() {
 func (r *writer) process(curDir string, dirs []string, files []string) {
 	curFragFile := r.findFragFile(curDir)
 	if curFragFile != nil {
-		fmt.Printf("->写入目录: %s \n", curFragFile.Name)
-		r.writeFileInfo(curFragFile, uint32((len(dirs)+len(files))*BLOCK_SIZE), 0)
+		subFileNum := len(dirs) + len(files)
+		fmt.Printf("=>写入文件夹: %s <%d 个文件>\n", curFragFile.Name, subFileNum)
+		r.writeFileInfo(curFragFile, uint32(subFileNum)*BLOCK_SIZE, 0)
 	}
 	// 目录组
 	for _, dir := range dirs {
@@ -104,8 +106,9 @@ func (r *writer) process(curDir string, dirs []string, files []string) {
 		// 取文件信息
 		curFragFile := r.findFragFile(curDir + "/" + file)
 		if curFragFile != nil {
-			fmt.Printf("->写入文件: %s \n", curFragFile.Name)
-			r.writeFileInfo(curFragFile, uint32(len(fileCompBytes)), uint32(fSize))
+			fileCompSize := len(fileCompBytes)
+			fmt.Printf("->写入文件: %s <%s>\n", curFragFile.Name, utils.Byte2Str(int64(fileCompSize)))
+			r.writeFileInfo(curFragFile, uint32(fileCompSize), uint32(fSize))
 		}
 		// 写
 		r.write(fileCompBytes)

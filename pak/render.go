@@ -79,22 +79,25 @@ func (r *reader) deFolder(curDir string) {
 	// 大小
 	fileSize := r.byte2uint32()
 	// 原始大小
-	fileOriginSize := r.byte2uint32()
+	r.byte2uint32()
 	// 时间戳
-	fileTs := r.byte2uint32()
+	r.byte2uint32()
 	// 目录名
 	fileName := r.readName()
+	// 移动指针至文件内容区
+	r.File.Seek(int64(filePath), io.SeekStart)
+	// 文件数量
+	subFileNum := fileSize / uint32(BLOCK_SIZE)
+
 	// 创建文件夹
 	folderPath := curDir + "/" + fileName
 	if !utils.Exists(folderPath) {
 		os.Mkdir(folderPath, os.ModePerm)
-		fmt.Printf("->创建文件夹: %s [%d %d] \n", fileName, fileOriginSize, fileTs)
+		fmt.Printf("=>解压文件夹: %s <%d 个文件> \n", fileName, subFileNum)
 	}
-	// 移动指针至文件内容区
-	r.File.Seek(int64(filePath), io.SeekStart)
-	// 文件数量
-	fileNum := fileSize / uint32(BLOCK_SIZE)
-	for i := 1; i <= int(fileNum); i++ {
+
+	// 读文件夹内容
+	for i := 1; i <= int(subFileNum); i++ {
 		// 文件类型
 		fileType := r.byte2uint32()
 		// 文件夹
@@ -125,7 +128,7 @@ func (r *reader) deFile(curDir string) {
 	if _, err := r.File.Read(compBytes); err != nil {
 		panic(err)
 	}
-	fmt.Printf("->正在解压: %s \n", fileName)
+	fmt.Printf("->解压文件: %s <%s>\n", fileName, utils.Byte2Str(int64(fileOriginSize)))
 	// 解压写文件
 	deCompBytes := make([]byte, fileOriginSize)
 	reader := lzss.NewReader(compBytes)
