@@ -12,9 +12,11 @@ import (
 )
 
 type writer struct {
-	File  *os.File
-	InDir string
-	Size  int64
+	File      *os.File
+	InDir     string
+	size      int64
+	startedAt time.Time
+	files     int64
 }
 
 type fragFile struct {
@@ -30,8 +32,9 @@ func NewWriter(inDir, file string) *writer {
 		panic(err)
 	}
 	return &writer{
-		File:  f,
-		InDir: inDir,
+		File:      f,
+		InDir:     inDir,
+		startedAt: time.Now(),
 	}
 }
 
@@ -46,13 +49,14 @@ func (r *writer) Compress() {
 	r.writeIgnore()
 	// 包大小
 	stat, _ := r.File.Stat()
-	r.Size = stat.Size()
+	r.size = stat.Size()
 	// 处理打包
 	r.process(r.InDir, dirs, files)
 }
 
 func (r *writer) Close() {
 	r.File.Close()
+	fmt.Printf("处理完成！%d 个文件，耗时：%v \n", r.files, time.Since(r.startedAt))
 }
 
 func (r *writer) process(curDir string, dirs []string, files []string) {
@@ -66,7 +70,7 @@ func (r *writer) process(curDir string, dirs []string, files []string) {
 	for _, dir := range dirs {
 		fragFile := &fragFile{
 			Name: curDir + "/" + dir,
-			Path: r.Size,
+			Path: r.size,
 		}
 		fragFiles = append(fragFiles, fragFile)
 		r.writeBlock(TYPE_FOLDER, dir)
@@ -75,7 +79,7 @@ func (r *writer) process(curDir string, dirs []string, files []string) {
 	for _, file := range files {
 		fragFile := &fragFile{
 			Name: curDir + "/" + file,
-			Path: r.Size,
+			Path: r.size,
 		}
 		fragFiles = append(fragFiles, fragFile)
 		r.writeBlock(TYPE_FILE, file)
@@ -86,13 +90,12 @@ func (r *writer) process(curDir string, dirs []string, files []string) {
 		if err != nil {
 			panic(err)
 		}
-		defer f.Close()
-
 		fStat, _ := f.Stat()
 		fSize := fStat.Size()
 
 		fileBytes := make([]byte, fSize)
 		f.Read(fileBytes)
+		f.Close()
 
 		// 压缩
 		buffer := new(bytes.Buffer)
@@ -110,7 +113,9 @@ func (r *writer) process(curDir string, dirs []string, files []string) {
 			fmt.Printf("->写入文件: %s <%s>\n", curFragFile.Name, utils.Byte2Str(int64(fileCompSize)))
 			r.writeFileInfo(curFragFile, uint32(fileCompSize), uint32(fSize))
 		}
+
 		// 写
+		r.files += 1
 		r.write(fileCompBytes)
 	}
 	// 递归处理
@@ -153,7 +158,7 @@ func (r *writer) findFragFile(dir string) *fragFile {
 
 func (r *writer) writeFileInfo(fragFile *fragFile, size, originSize uint32) {
 	// 地址
-	r.writeAtUint32(uint32(r.Size), fragFile.Path+4)
+	r.writeAtUint32(uint32(r.size), fragFile.Path+4)
 	// 大小
 	r.writeAtUint32(size, fragFile.Path+8)
 	// 原始大小
@@ -205,5 +210,5 @@ func (r *writer) writeBlock(t uint32, name string) {
 
 func (r *writer) write(v []byte) {
 	r.File.Write(v)
-	r.Size += int64(len(v))
+	r.size += int64(len(v))
 }

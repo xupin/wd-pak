@@ -20,8 +20,13 @@ func main() {
 	flag.Parse()
 
 	if t < 1 || len(filePath) == 0 || len(folderPath) == 0 {
-		fmt.Printf("请输入 -h 查看说明（via 90gm.vip） \n")
+		fmt.Printf("请输入 -h 查看说明\n")
 		return
+	}
+
+	// 处理最后一个字符
+	if folderPath[len(folderPath)-1:] == "/" {
+		folderPath = folderPath[:len(folderPath)-1]
 	}
 
 	if t == 1 {
@@ -37,8 +42,8 @@ func main() {
 			fmt.Printf("目录 %s 不存在 \n", folderPath)
 			return
 		}
-		pakReader := core.NewWriter(folderPath, filePath)
-		pakReader.Compress()
-		pakReader.Close()
+		pakWriter := core.NewWriter(folderPath, filePath)
+		pakWriter.Compress()
+		pakWriter.Close()
 	}
 }
