@@ -85,36 +85,7 @@ func (r *reader) process(curDir string) {
 	// 指针移动至文件内容区
 	r.File.Seek(int64(filePath), io.SeekStart)
 	// 处理
-	if fileType == TYPE_FILE {
-		compBytes := make([]byte, fileSize)
-		if _, err := r.File.Read(compBytes); err != nil {
-			panic(err)
-		}
-		r.files += 1
-		r.wg.Add(1)
-		go func() {
-			defer r.wg.Done()
-			fmt.Printf("->解压文件：%s/%s <%s>\n", curDir, fileName, utils.Byte2Str(int64(fileOriginSize)))
-			// 解压写文件
-			deCompBytes := make([]byte, fileOriginSize)
-			reader := lzss.NewReader(compBytes)
-			reader.Read(deCompBytes)
-			f1, err := os.OpenFile(curDir+"/"+fileName, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0666)
-			if err != nil {
-				panic(err)
-			}
-			defer f1.Close()
-			for i, b := range deCompBytes {
-				if b != byte(0) {
-					continue
-				}
-				r := rune(' ')
-				sBytes := []byte(string(r))
-				deCompBytes[i] = sBytes[0]
-			}
-			f1.Write(deCompBytes)
-		}()
-	} else {
+	if fileType == TYPE_FOLDER {
 		// 子文件数量
 		subFileNum := fileSize / uint32(BLOCK_SIZE)
 		// 创建文件夹
@@ -129,6 +100,39 @@ func (r *reader) process(curDir string) {
 			// 指针重新移动至文件信息区
 			r.File.Seek(int64(filePath+uint32(i*BLOCK_SIZE)), io.SeekStart)
 		}
+	} else {
+		compBytes := make([]byte, fileSize)
+		if _, err := r.File.Read(compBytes); err != nil {
+			panic(err)
+		}
+		r.files += 1
+		r.wg.Add(1)
+		go func() {
+			defer r.wg.Done()
+			fmt.Printf("->解压文件：%s/%s <%s>\n", curDir, fileName, utils.Byte2Str(int64(fileOriginSize)))
+
+			// 解压写文件
+			deCompBytes := make([]byte, fileOriginSize)
+			reader := lzss.NewReader(compBytes)
+			reader.Read(deCompBytes)
+			defer reader.Close()
+
+			f1, err := os.OpenFile(curDir+"/"+fileName, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0666)
+			if err != nil {
+				panic(err)
+			}
+			defer f1.Close()
+
+			for i, b := range deCompBytes {
+				if b != byte(0) {
+					continue
+				}
+				r := rune(' ')
+				sBytes := []byte(string(r))
+				deCompBytes[i] = sBytes[0]
+			}
+			f1.Write(deCompBytes)
+		}()
 	}
 }
 
